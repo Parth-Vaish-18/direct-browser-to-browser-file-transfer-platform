@@ -1,9 +1,24 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Routes, Route, Link } from 'react-router-dom';
 import SenderView from './SenderView';
 import ReceiverView from './ReceiverView';
 
 export default function App() {
+    useEffect(() => {
+  const clearStaleStorage = async () => {
+    try {
+      if (navigator.storage && navigator.storage.getDirectory) {
+        const root = await navigator.storage.getDirectory();
+        await root.removeEntry('p2p_temp_transfer', { recursive: true });
+        console.log('Stale OPFS storage cleared successfully on app launch.');
+      }
+    } catch (err) {
+      // If the entry doesn't exist, it will throw an error, which we can safely ignore
+      console.log('No stale storage to clear.');
+    }
+  };
+  clearStaleStorage();
+}, []);
   return (
     <div style={{
       minHeight: '100vh',
@@ -77,18 +92,3 @@ export default function App() {
     </div>
   );
 }
-useEffect(() => {
-  const clearStaleStorage = async () => {
-    try {
-      if (navigator.storage && navigator.storage.getDirectory) {
-        const root = await navigator.storage.getDirectory();
-        await root.removeEntry('p2p_temp_transfer', { recursive: true });
-        console.log('Stale OPFS storage cleared successfully on app launch.');
-      }
-    } catch (err) {
-      // If the entry doesn't exist, it will throw an error, which we can safely ignore
-      console.log('No stale storage to clear.');
-    }
-  };
-  clearStaleStorage();
-}, []);
