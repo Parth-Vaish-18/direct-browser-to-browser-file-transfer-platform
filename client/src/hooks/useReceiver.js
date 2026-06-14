@@ -179,12 +179,8 @@ export function useReceiver(roomId) {
       // 1. Close the OPFS write stream
       await opfsWritableRef.current.close();
       
-      // 2. Read the final file from OPFS as a disk-backed File object (ZERO RAM CRASH!)
+      // 2. Read the final file from OPFS as a disk-backed File object
       const finalFile = await opfsFileHandleRef.current.getFile();
-
-      // Note: We bypass full-file SHA-256 here for massive files because AES-GCM inherently 
-      // authenticates every single chunk via its crypto tags. If tampering occurred, 
-      // the decryptChunk function would have already thrown an error and aborted the transfer.
 
       // 3. Create a disk-backed Blob URL and auto-download
       const url = URL.createObjectURL(finalFile);
@@ -193,11 +189,23 @@ export function useReceiver(roomId) {
       document.body.appendChild(anchor); anchor.click(); document.body.removeChild(anchor);
       setTimeout(() => URL.revokeObjectURL(url), 1000);
 
+      // Successfully finish the UI state
       setVerifying(false); setProgress(100); setStatus('done');
       
-      // Clear OPFS disk after successful download
-      const root = await navigator.storage.getDirectory();
-      await root.removeEntry('p2p_temp_transfer');
+      // 4. THE FIX: Silent Cleanup & State Reset
+      try {
+        const root = await navigator.storage.getDirectory();
+        await root.removeEntry('p2p_temp_transfer');
+        // Reset our variables so the NEXT transfer starts at 0 bytes
+        totalWrittenRef.current = 0; 
+        metaRef.current = null;
+      } catch (cleanupErr) {
+        console.warn('Mobile browser delayed cleanup, forcing state reset anyway.');
+        // Even if the mobile browser blocks the deletion, reset our memory tracker!
+        totalWrittenRef.current = 0;
+        metaRef.current = null;
+      }
+
     } catch (err) {
       setVerifying(false); setError(`File finalization error: ${err.message}`); setStatus('error');
     }
