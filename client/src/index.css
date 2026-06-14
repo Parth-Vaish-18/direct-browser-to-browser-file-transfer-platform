@@ -1,0 +1,107 @@
+/* ─── Premium Design Tokens ──────────────────────────────────────────────── */
+:root {
+  --bg:          #050508;
+  --surface:     #111116;
+  --surface-glass: rgba(17, 17, 22, 0.65);
+  --surface-2:   #1a1a24;
+  --border:      rgba(255, 255, 255, 0.08);
+  --border-glow: rgba(108, 99, 255, 0.3);
+
+  --accent:      #6c63ff;
+  --accent-dim:  rgba(108, 99, 255, 0.1);
+  --accent-glow: rgba(108, 99, 255, 0.25);
+  --success:     #10b981;
+  --success-dim: rgba(16, 185, 129, 0.1);
+  --warning:     #f59e0b;
+  --danger:      #ef4444;
+  --danger-dim:  rgba(239, 68, 68, 0.1);
+
+  --text-primary:   #ffffff;
+  --text-secondary: #94a3b8;
+  --text-muted:     #64748b;
+
+  --radius:    16px;
+  --radius-lg: 24px;
+  --radius-sm: 8px;
+
+  --font-display: 'Space Grotesk', system-ui, sans-serif;
+  --font-mono:    'JetBrains Mono', monospace;
+
+  --transition: 250ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ─── Reset ──────────────────────────────────────────────────────────────── */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html { scroll-behavior: smooth; }
+
+body {
+  background: var(--bg);
+  color: var(--text-primary);
+  font-family: var(--font-display);
+  font-size: 16px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* ─── Animated Mesh Background ───────────────────────────────────────────── */
+body::before {
+  content: '';
+  position: fixed;
+  inset: -50%;
+  background:
+    radial-gradient(circle at 50% 50%, rgba(108, 99, 255, 0.08) 0%, transparent 40%),
+    radial-gradient(circle at 80% 20%, rgba(16, 185, 129, 0.05) 0%, transparent 30%);
+  animation: mesh-drift 20s ease-in-out infinite alternate;
+  pointer-events: none;
+  z-index: 0;
+}
+
+#root { position: relative; z-index: 1; }
+
+/* ─── Scrollbar ──────────────────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+
+/* ─── Focus ──────────────────────────────────────────────────────────────── */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+  border-radius: var(--radius-sm);
+}
+
+/* ─── Animations ─────────────────────────────────────────────────────────── */
+@keyframes mesh-drift {
+  0%   { transform: rotate(0deg) scale(1); }
+  100% { transform: rotate(15deg) scale(1.1); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(12px); filter: blur(4px); }
+  to   { opacity: 1; transform: translateY(0); filter: blur(0); }
+}
+
+@keyframes pulse-ring {
+  0%   { box-shadow: 0 0 0 0 var(--accent-glow); }
+  70%  { box-shadow: 0 0 0 10px transparent; }
+  100% { box-shadow: 0 0 0 0 transparent; }
+}
+
+@keyframes shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@keyframes bounce-in {
+  0%   { transform: scale(0.9); opacity: 0; }
+  50%  { transform: scale(1.02); }
+  100% { transform: scale(1); opacity: 1; }
+}
