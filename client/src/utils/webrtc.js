@@ -7,9 +7,29 @@
  */
 export const RTC_CONFIG = {
   iceServers: [
+    // The STUN server
     { urls: 'stun:stun.l.google.com:19302' },
-    { urls: 'stun:stun1.l.google.com:19302' },
-    { urls: 'stun:stun2.l.google.com:19302' },
+    
+    // TURN Server 1 (UDP)
+    {
+      urls: 'turn:global.relay.metered.ca:80', // LEAVE THIS EXACTLY AS IS
+      username: '3fba4f70f86fe4885c332e33',          // PASTE YOUR USERNAME
+      credential: 'JWhIyRoVEIBiHsbt'         // PASTE YOUR PASSWORD
+    },
+    
+    // TURN Server 2 (TCP)
+    {
+      urls: 'turn:global.relay.metered.ca:80?transport=tcp', // LEAVE THIS EXACTLY AS IS
+      username: '3fba4f70f86fe4885c332e33',                        // PASTE YOUR USERNAME
+      credential: 'JWhIyRoVEIBiHsbt'                       // PASTE YOUR PASSWORD
+    },
+    
+    // TURN Server 3 (Secure TLS)
+    {
+      urls: 'turn:global.relay.metered.ca:443?transport=tcp', // LEAVE THIS EXACTLY AS IS
+      username: '3fba4f70f86fe4885c332e33',                         // PASTE YOUR USERNAME
+      credential: 'JWhIyRoVEIBiHsbt'                        // PASTE YOUR PASSWORD
+    }
   ],
   iceCandidatePoolSize: 10,
 };
