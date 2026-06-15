@@ -7,6 +7,7 @@ const STATUS_MAP = {
   idle:         { label: 'Setting up room…',        color: '#8888aa', pulse: false },
   creating:     { label: 'Creating room…',           color: '#8888aa', pulse: false },
   waiting:      { label: 'Waiting for receiver',     color: '#f59e0b', pulse: true  },
+  'awaiting-peer': { label: 'Waiting for sender',    color: '#f59e0b', pulse: true  },
   joining:      { label: 'Joining room…',            color: '#8888aa', pulse: false },
   connecting:   { label: 'Establishing connection',  color: '#6c63ff', pulse: true  },
   connected:    { label: 'Connected',                color: '#22c55e', pulse: false },

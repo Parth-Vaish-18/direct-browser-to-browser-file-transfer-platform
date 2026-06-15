@@ -173,7 +173,7 @@ export function useReceiver(roomId) {
     socketRef.current = socket;
 
     socket.on('connect', () => socket.emit('join-room', roomId));
-    socket.on('room-joined', () => setStatusBoth('waiting'));
+    socket.on('room-joined', () => setStatusBoth('awaiting-peer'));
 
     socket.on('offer', async ({ offer }) => {
       setStatusBoth('connecting');
