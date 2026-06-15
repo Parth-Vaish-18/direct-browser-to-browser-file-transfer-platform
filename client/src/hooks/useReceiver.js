@@ -188,19 +188,12 @@ export function useReceiver(roomId) {
           pc.ondatachannel = ({ channel }) => {
             channel.binaryType = 'arraybuffer';
 
-            channel.onopen = async () => {
+            channel.onopen = () => {
               setStatusBoth('connected');
-              try {
-                const offset = await initOPFS(true);
-                setBytesReceived(offset);
-                speedWindowRef.current = { bytes: 0, time: Date.now() };
-                channel.send(JSON.stringify({ type: 'READY', offset: 0 }));
-              } catch (err) {
-                setError(err.message);
-                setStatusBoth('error');
-              }
+              // We intentionally do nothing else here!
+              // The disk will initialize when we receive 'FILE_SELECTED' in onmessage.
             };
-
+            
             channel.onclose = () => {
               if (statusRef.current !== 'done') {
                 setStatusBoth('disconnected');
