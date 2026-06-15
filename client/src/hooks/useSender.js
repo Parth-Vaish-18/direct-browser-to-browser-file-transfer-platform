@@ -23,6 +23,7 @@ export function useSender() {
   const fileRef        = useRef(null);
   const cryptoKeyRef   = useRef(null);
   const roomIdRef      = useRef(null);
+  const pendingCandidatesRef = useRef([]); // ICE candidates that arrived before remote SDP was set
 
   const statusRef      = useRef('idle');
   const mountedRef     = useRef(false);
@@ -61,6 +62,7 @@ export function useSender() {
 
     socket.on('peer-joined', async () => {
       cleanupPeer();
+      pendingCandidatesRef.current = [];
       setStatusBoth('connecting');
       try {
         const pc = new RTCPeerConnection(RTC_CONFIG);
@@ -144,13 +146,31 @@ export function useSender() {
     });
 
     socket.on('answer', async ({ answer }) => {
-      try { await pcRef.current?.setRemoteDescription(answer); }
-      catch (err) { console.warn('setRemoteDescription error:', err.message); }
+      const pc = pcRef.current;
+      if (!pc) return;
+      try {
+        await pc.setRemoteDescription(answer);
+        // Flush any ICE candidates that arrived before the answer did
+        const queued = pendingCandidatesRef.current;
+        pendingCandidatesRef.current = [];
+        for (const candidate of queued) {
+          try { await pc.addIceCandidate(candidate); }
+          catch (err) { console.warn('addIceCandidate (queued) error:', err.message); }
+        }
+      } catch (err) {
+        console.warn('setRemoteDescription error:', err.message);
+      }
     });
 
     socket.on('ice-candidate', async ({ candidate }) => {
-      try { await pcRef.current?.addIceCandidate(candidate); }
-      catch (_) {} 
+      const pc = pcRef.current;
+      if (!pc || !pc.remoteDescription) {
+        // Remote SDP not set yet — hold onto this candidate for later
+        pendingCandidatesRef.current.push(candidate);
+        return;
+      }
+      try { await pc.addIceCandidate(candidate); }
+      catch (err) { console.warn('addIceCandidate error:', err.message); }
     });
 
     socket.on('peer-disconnected', () => {

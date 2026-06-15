@@ -36,12 +36,19 @@ export const RTC_CONFIG = {
 
 /**
  * DataChannel configuration.
- * ordered: true  — chunks must arrive in order (no reordering overhead)
- * maxRetransmits: 30 — retry each packet up to 30 times before dropping
+ * ordered: true — chunks must arrive in order (no reordering overhead).
+ *
+ * NOTE: We intentionally do NOT set maxRetransmits or maxPacketLifeTime.
+ * Either of those makes the channel "partially reliable" (PR-SCTP) — after
+ * the limit is hit, SCTP silently DROPS the message forever. For a file
+ * transfer that's verified byte-for-byte via SHA-256, that's data
+ * corruption, not just a delay. Leaving both unset gives the default
+ * fully-reliable, ordered (TCP-like) delivery, which is what we need —
+ * especially on lossy/high-latency mobile networks where a chunk may
+ * need many retransmits before it gets through.
  */
 export const DC_CONFIG = {
   ordered: true,
-  maxRetransmits: 30,
 };
 
 /** Chunk size in bytes. 64 KB is safe across all browsers. */
