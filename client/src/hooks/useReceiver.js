@@ -99,21 +99,25 @@ export function useReceiver(roomId) {
         arrayBuffer = await finalFile.arrayBuffer();
       }
 
-      const receivedHash = await sha256(arrayBuffer);
-      
-      if (receivedHash !== meta.hash) {
-        setVerifying(false);
-        setError('File integrity check FAILED — SHA-256 mismatch. The file may be corrupted.');
-        setStatusBoth('error');
-        if (!useMemoryBufferRef.current) {
-          try {
-            const root = await navigator.storage.getDirectory();
-            await root.removeEntry('p2p_temp_transfer');
-          } catch (_) {}
+      // --- STEP 2 FIX: Safely handle the large-file hash bypass ---
+      if (meta.hash !== 'skipped-due-to-size') {
+        const receivedHash = await sha256(arrayBuffer);
+        
+        if (receivedHash !== meta.hash) {
+          setVerifying(false);
+          setError('File integrity check FAILED — SHA-256 mismatch. The file may be corrupted.');
+          setStatusBoth('error');
+          if (!useMemoryBufferRef.current) {
+            try {
+              const root = await navigator.storage.getDirectory();
+              await root.removeEntry('p2p_temp_transfer');
+            } catch (_) {}
+          }
+          memoryChunksRef.current = [];
+          return;
         }
-        memoryChunksRef.current = [];
-        return;
       }
+      // -------------------------------------------------------------
 
       const blob = new Blob([arrayBuffer], { type: meta.type || 'application/octet-stream' });
       const url = URL.createObjectURL(blob);
@@ -147,7 +151,7 @@ export function useReceiver(roomId) {
       setError(`Finalization error: ${err.message}`);
       setStatusBoth('error');
     }
-  }, []);
+  }, []);;
 
   useEffect(() => {
     if (!roomId) return;
@@ -193,7 +197,7 @@ export function useReceiver(roomId) {
               // We intentionally do nothing else here!
               // The disk will initialize when we receive 'FILE_SELECTED' in onmessage.
             };
-            
+
             channel.onclose = () => {
               if (statusRef.current !== 'done') {
                 setStatusBoth('disconnected');

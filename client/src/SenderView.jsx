@@ -60,7 +60,7 @@ export default function SenderView() {
         gap: '24px',
       }}>
         
-        {/* Step 1: File Selection */}
+        {/* Step 1: File Selection (Visible initially) */}
         {!file ? (
           <DropZone onFile={setFile} disabled={status === 'error' || status === 'disconnected'} />
         ) : (
@@ -72,8 +72,8 @@ export default function SenderView() {
           />
         )}
 
-        {/* Step 2: Share Link (Visible if we have a room and haven't finished) */}
-        {roomId && (status === 'waiting' || status === 'connecting' || status === 'connected') && (
+        {/* Step 2: Share Link (Only visible AFTER the file is picked and the link is generated!) */}
+        {shareLink && roomId && (status === 'waiting' || status === 'connecting' || status === 'connected') && (
           <div style={{ paddingTop: '16px', borderTop: '1px solid var(--border)' }}>
             <ShareLink link={shareLink} />
           </div>

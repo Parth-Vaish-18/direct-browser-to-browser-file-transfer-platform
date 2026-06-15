@@ -23,10 +23,9 @@ export function useSender() {
   const fileRef        = useRef(null);
   const cryptoKeyRef   = useRef(null);
   const roomIdRef      = useRef(null);
-  const pendingCandidatesRef = useRef([]); // ICE candidates that arrived before remote SDP was set
+  const pendingCandidatesRef = useRef([]); // YOUR custom ICE candidate queue is intact
 
   const statusRef      = useRef('idle');
-  const mountedRef     = useRef(false);
 
   const setStatusBoth = (s) => { statusRef.current = s; setStatus(s); };
 
@@ -35,9 +34,9 @@ export function useSender() {
     if (pcRef.current) { try { pcRef.current.close(); } catch (_) {} pcRef.current = null; }
   }, []);
 
-  useEffect(() => {
-    if (mountedRef.current) return;
-    mountedRef.current = true;
+  // UPGRADE 3: We wrapped your EXACT connection logic into this function
+  const startConnection = useCallback(() => {
+    if (socketRef.current) return;
 
     const socket = io(SIGNAL_URL, {
       transports: ['websocket', 'polling'],
@@ -108,7 +107,6 @@ export function useSender() {
         let iceRestartTimer = null;
         pc.onconnectionstatechange = async () => {
           const state = pc.connectionState;
-          
           if (state === 'disconnected') {
             iceRestartTimer = setTimeout(async () => {
               if (pc.connectionState !== 'connected') {
@@ -124,11 +122,9 @@ export function useSender() {
               }
             }, 3000);
           }
-          
           if (state === 'connected') {
             if (iceRestartTimer) { clearTimeout(iceRestartTimer); iceRestartTimer = null; }
           }
-          
           if (state === 'failed') {
             if (iceRestartTimer) clearTimeout(iceRestartTimer);
             setError('WebRTC connection failed. Your network may block P2P connections.');
@@ -150,7 +146,6 @@ export function useSender() {
       if (!pc) return;
       try {
         await pc.setRemoteDescription(answer);
-        // Flush any ICE candidates that arrived before the answer did
         const queued = pendingCandidatesRef.current;
         pendingCandidatesRef.current = [];
         for (const candidate of queued) {
@@ -165,7 +160,6 @@ export function useSender() {
     socket.on('ice-candidate', async ({ candidate }) => {
       const pc = pcRef.current;
       if (!pc || !pc.remoteDescription) {
-        // Remote SDP not set yet — hold onto this candidate for later
         pendingCandidatesRef.current.push(candidate);
         return;
       }
@@ -184,21 +178,22 @@ export function useSender() {
       setStatusBoth('error');
     });
 
-    return () => {
-      mountedRef.current = false;
-      cleanupPeer();
-      socket.disconnect();
-    };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [cleanupPeer]);
 
   const sendFile = useCallback(async (targetFile, startOffset = 0) => {
     const dc = dcRef.current;
     if (!dc || dc.readyState !== 'open') return;
     try {
-      setIsHashing(true);
-      const fileHash = await sha256(targetFile);
-      setIsHashing(false);
+      setStatusBoth('transferring');
+      
+      // UPGRADE 2: RAM-Safe Hash Bypass
+      let fileHash = 'skipped-due-to-size';
+      if (targetFile.size < 25 * 1024 * 1024) {
+        setIsHashing(true);
+        fileHash = await sha256(targetFile); // Used YOUR original sha256 call
+        setIsHashing(false);
+      }
       
       if (startOffset === 0) {
         dc.send(JSON.stringify({
@@ -209,13 +204,12 @@ export function useSender() {
         }));
       }
       
-      setStatusBoth('transferring');
-      const buffer = await targetFile.arrayBuffer();
       let offset = startOffset;
       let totalSent = startOffset;
       const speedWindow = { bytes: 0, time: Date.now() };
       
-      while (offset < buffer.byteLength) {
+      // UPGRADE 1: RAM-Safe File Slice Streaming
+      while (offset < targetFile.size) {
         if (dc.readyState !== 'open') {
           throw new Error('DataChannel closed during transfer.');
         }
@@ -223,15 +217,18 @@ export function useSender() {
           await new Promise((r) => setTimeout(r, 50));
           continue;
         }
-        const end = Math.min(offset + CHUNK_SIZE, buffer.byteLength);
-        const rawChunk = buffer.slice(offset, end);
+        
+        const end = Math.min(offset + CHUNK_SIZE, targetFile.size);
+        const chunkBlob = targetFile.slice(offset, end);
+        const rawChunk = await chunkBlob.arrayBuffer();
+        
         const encryptedChunk = await encryptChunk(rawChunk, cryptoKeyRef.current);
         
         dc.send(encryptedChunk);
         offset = end;
         totalSent += rawChunk.byteLength;
         
-        setProgress(Math.round((totalSent / buffer.byteLength) * 100));
+        setProgress(Math.round((totalSent / targetFile.size) * 100));
         setBytesSent(totalSent);
         
         const now = Date.now();
@@ -241,7 +238,7 @@ export function useSender() {
         if (elapsed >= 0.5) {
           const bps = speedWindow.bytes / elapsed;
           setSpeed(bps);
-          setEta((buffer.byteLength - totalSent) / bps);
+          setEta((targetFile.size - totalSent) / bps);
           speedWindow.bytes = 0;
           speedWindow.time = now;
         }
@@ -259,10 +256,14 @@ export function useSender() {
   const setFile = useCallback((f) => {
     setFileState(f);
     fileRef.current = f;
-    if (dcRef.current?.readyState === 'open') {
+    
+    // UPGRADE 3 Trigger: We start the server connection HERE!
+    if (!socketRef.current) {
+      startConnection();
+    } else if (dcRef.current?.readyState === 'open') {
       dcRef.current.send(JSON.stringify({ type: 'FILE_SELECTED' }));
     }
-  }, []);
+  }, [startConnection]);
 
   const clearFile = useCallback(() => {
     setFileState(null);
@@ -271,6 +272,17 @@ export function useSender() {
     setStatusBoth(roomIdRef.current ? 'waiting' : 'idle');
     setError(null);
   }, []);
+
+  // Cleanup on unmount (replaces the old auto-connect block)
+  useEffect(() => {
+    return () => {
+      cleanupPeer();
+      if (socketRef.current) {
+        socketRef.current.disconnect();
+        socketRef.current = null;
+      }
+    };
+  }, [cleanupPeer]);
 
   return { status, error, roomId, shareLink, file, progress, speed, eta, bytesSent, isHashing, setFile, clearFile };
 }
