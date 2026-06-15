@@ -1,7 +1,5 @@
 /**
  * Format a byte count into a human-readable string.
- * e.g. 1536 → "1.5 KB", 2097152 → "2.0 MB"
- *
  * @param {number} bytes
  * @returns {string}
  */
@@ -11,10 +9,8 @@ export function formatBytes(bytes) {
   const i = Math.floor(Math.log(bytes) / Math.log(1024));
   return `${(bytes / Math.pow(1024, i)).toFixed(i === 0 ? 0 : 1)} ${units[i]}`;
 }
-
 /**
- * Format a transfer speed in bytes/second to a readable MB/s or KB/s string.
- *
+ * Format a transfer speed in bytes/second to MB/s or KB/s string.
  * @param {number} bytesPerSec
  * @returns {string}
  */
@@ -25,11 +21,9 @@ export function formatSpeed(bytesPerSec) {
   }
   return `${(bytesPerSec / 1024).toFixed(0)} KB/s`;
 }
-
 /**
- * Format remaining seconds into a human-readable countdown.
+ * Format remaining seconds into a countdown.
  * e.g. 90 → "1 min 30 sec", 5 → "5 sec"
- *
  * @param {number} seconds
  * @returns {string}
  */
@@ -40,10 +34,8 @@ export function formatETA(seconds) {
   const s = Math.ceil(seconds % 60);
   return `${m} min ${s} sec`;
 }
-
 /**
  * Returns a file-type category label from a MIME type.
- *
  * @param {string} mimeType
  * @returns {string}
  */
@@ -59,11 +51,8 @@ export function getFileTypeLabel(mimeType) {
   if (mimeType.includes('sheet') || mimeType.includes('excel')) return 'Spreadsheet';
   return 'File';
 }
-
 /**
- * Returns an emoji icon for a file type label.
- *
- * @param {string} label - from getFileTypeLabel()
+ * @param {string} label
  * @returns {string}
  */
 export function getFileTypeIcon(label) {

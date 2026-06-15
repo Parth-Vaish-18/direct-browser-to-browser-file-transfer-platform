@@ -60,7 +60,7 @@ export default function SenderView() {
         gap: '24px',
       }}>
         
-        {/* Step 1: File Selection (Visible initially) */}
+        {/*File Selection*/}
         {!file ? (
           <DropZone onFile={setFile} disabled={status === 'error' || status === 'disconnected'} />
         ) : (
@@ -72,14 +72,14 @@ export default function SenderView() {
           />
         )}
 
-        {/* Step 2: Share Link (Only visible AFTER the file is picked and the link is generated!) */}
+        {/*Share Link*/}
         {shareLink && roomId && (status === 'waiting' || status === 'connecting' || status === 'connected') && (
           <div style={{ paddingTop: '16px', borderTop: '1px solid var(--border)' }}>
             <ShareLink link={shareLink} />
           </div>
         )}
 
-        {/* Step 3: Progress Bar (Visible during transfer and upon completion) */}
+        {/*Progress Bar*/}
         {(status === 'transferring' || status === 'done') && file && (
           <div style={{ paddingTop: '16px', borderTop: '1px solid var(--border)' }}>
             <TransferProgress

@@ -1,16 +1,10 @@
 /**
- * P2P Web Share — Signaling Server (FIXED)
- *
- * Fixes applied:
- * 1. CORS: origin is now an array with trailing-slash normalization
- * 2. OPTIONS preflight handled explicitly for WebSocket upgrade paths
- * 3. Stale room cleanup now also runs when both peers disconnect mid-session
+ * P2P Web Share
  */
 const express = require('express');
 const { createServer } = require('http');
 const { Server } = require('socket.io');
 const cors = require('cors');
-
 const app = express();
 
 // ── CORS ──────────────────────────────────────────────────────────────────────
@@ -19,7 +13,6 @@ const ALLOWED_ORIGINS = [rawOrigin, rawOrigin.replace(/\/$/, '')];
 
 const corsOptions = {
   origin: (origin, callback) => {
-    // Allow requests with no origin (same-origin, Postman, health checks)
     if (!origin) return callback(null, true);
     const clean = origin.replace(/\/$/, '');
     if (ALLOWED_ORIGINS.some(o => o.replace(/\/$/, '') === clean)) {
@@ -32,7 +25,7 @@ const corsOptions = {
 };
 
 app.use(cors(corsOptions));
-app.options('*', cors(corsOptions)); // Handle OPTIONS preflight for all routes
+app.options('*', cors(corsOptions));
 app.use(express.json());
 
 // ── Health check ──────────────────────────────────────────────────────────────
@@ -50,7 +43,7 @@ const httpServer = createServer(app);
 const io = new Server(httpServer, {
   cors: corsOptions,
   maxHttpBufferSize: 1e6,
-  transports: ['websocket', 'polling'], // Prefer WebSocket, fall back to polling
+  transports: ['websocket', 'polling'],
 });
 
 // ── In-memory room store ──────────────────────────────────────────────────────

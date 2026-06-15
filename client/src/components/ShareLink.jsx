@@ -2,10 +2,7 @@ import React, { useState, useCallback } from 'react';
 
 /**
  * ShareLink
- *
  * Displays the share URL with a copy-to-clipboard button.
- * Shows a brief "Copied!" confirmation toast.
- *
  * @param {{ link: string }} props
  */
 export default function ShareLink({ link }) {

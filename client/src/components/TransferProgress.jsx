@@ -3,7 +3,6 @@ import { formatBytes, formatSpeed, formatETA } from '../utils/format';
 
 /**
  * TransferProgress
- *
  * Shows an animated progress bar with live transfer stats.
  *
  * @param {{

@@ -13,7 +13,6 @@ export default function App() {
         console.log('Stale OPFS storage cleared successfully on app launch.');
       }
     } catch (err) {
-      // If the entry doesn't exist, it will throw an error, which we can safely ignore
       console.log('No stale storage to clear.');
     }
   };

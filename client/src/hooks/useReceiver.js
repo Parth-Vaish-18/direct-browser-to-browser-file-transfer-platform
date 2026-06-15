@@ -19,16 +19,14 @@ export function useReceiver(roomId) {
   const pcRef          = useRef(null);
   const cryptoKeyRef   = useRef(null);
   const metaRef        = useRef(null);
-
   const statusRef      = useRef('joining');
   const mountedRef     = useRef(false);
-
   const opfsFileHandleRef = useRef(null);
   const opfsWritableRef   = useRef(null);
   const totalWrittenRef   = useRef(0);
   const speedWindowRef    = useRef({ bytes: 0, time: Date.now() });
-  const pendingCandidatesRef = useRef([]); // ICE candidates that arrived before remote SDP was set
-  const useMemoryBufferRef = useRef(false); // true on browsers without OPFS createWritable (Safari/iOS)
+  const pendingCandidatesRef = useRef([]);
+  const useMemoryBufferRef = useRef(false);
   const memoryChunksRef    = useRef([]);
 
   const setStatusBoth = (s) => { statusRef.current = s; setStatus(s); };
@@ -46,8 +44,6 @@ export function useReceiver(roomId) {
       }
       const fileHandle = await root.getFileHandle('p2p_temp_transfer', { create: true });
 
-      // Safari / iOS (all browsers on iOS are WebKit) implement OPFS but
-      // do NOT implement createWritable() on FileSystemFileHandle.
       if (typeof fileHandle.createWritable !== 'function') {
         throw new Error('OPFS createWritable() unsupported on this browser');
       }
@@ -66,8 +62,6 @@ export function useReceiver(roomId) {
         totalWrittenRef.current = 0;
       }
     } catch (err) {
-      // Fallback: buffer the file in memory. Works everywhere but is
-      // limited by available RAM, so it's a last resort.
       console.warn('[OPFS] unavailable, falling back to memory buffer:', err.message);
       useMemoryBufferRef.current = true;
       memoryChunksRef.current = [];
@@ -99,7 +93,6 @@ export function useReceiver(roomId) {
         arrayBuffer = await finalFile.arrayBuffer();
       }
 
-      // --- STEP 2 FIX: Safely handle the large-file hash bypass ---
       if (meta.hash !== 'skipped-due-to-size') {
         const receivedHash = await sha256(arrayBuffer);
         
@@ -117,7 +110,6 @@ export function useReceiver(roomId) {
           return;
         }
       }
-      // -------------------------------------------------------------
 
       const blob = new Blob([arrayBuffer], { type: meta.type || 'application/octet-stream' });
       const url = URL.createObjectURL(blob);
@@ -194,8 +186,6 @@ export function useReceiver(roomId) {
 
             channel.onopen = () => {
               setStatusBoth('connected');
-              // We intentionally do nothing else here!
-              // The disk will initialize when we receive 'FILE_SELECTED' in onmessage.
             };
 
             channel.onclose = () => {
@@ -299,9 +289,6 @@ export function useReceiver(roomId) {
         }
 
         await pc.setRemoteDescription(offer);
-
-        // Flush any ICE candidates that arrived before this (re)negotiation's
-        // remote description was set
         const queued = pendingCandidatesRef.current;
         pendingCandidatesRef.current = [];
         for (const candidate of queued) {
@@ -346,7 +333,6 @@ export function useReceiver(roomId) {
       cleanup();
       socket.disconnect();
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [roomId]);
 
   return { status, error, fileMeta, progress, speed, eta, bytesReceived, verifying };

@@ -23,7 +23,7 @@ export function useSender() {
   const fileRef        = useRef(null);
   const cryptoKeyRef   = useRef(null);
   const roomIdRef      = useRef(null);
-  const pendingCandidatesRef = useRef([]); // YOUR custom ICE candidate queue is intact
+  const pendingCandidatesRef = useRef([]);
 
   const statusRef      = useRef('idle');
 
@@ -34,7 +34,6 @@ export function useSender() {
     if (pcRef.current) { try { pcRef.current.close(); } catch (_) {} pcRef.current = null; }
   }, []);
 
-  // UPGRADE 3: We wrapped your EXACT connection logic into this function
   const startConnection = useCallback(() => {
     if (socketRef.current) return;
 
@@ -43,7 +42,6 @@ export function useSender() {
       reconnectionAttempts: 5,
     });
     socketRef.current = socket;
-
     socket.on('connect', async () => {
       const id = generateRoomId();
       setRoomId(id);
@@ -58,7 +56,6 @@ export function useSender() {
     });
 
     socket.on('room-created', () => setStatusBoth('waiting'));
-
     socket.on('peer-joined', async () => {
       cleanupPeer();
       pendingCandidatesRef.current = [];
@@ -76,7 +73,6 @@ export function useSender() {
             dc.send(JSON.stringify({ type: 'FILE_SELECTED' }));
           }
         };
-
         dc.onmessage = async ({ data }) => {
           if (typeof data === 'string') {
             const msg = JSON.parse(data);
@@ -85,25 +81,21 @@ export function useSender() {
             }
           }
         };
-
         dc.onclose = () => {
           if (statusRef.current !== 'done') {
             setStatusBoth('disconnected');
             setError('Connection closed before transfer completed.');
           }
         };
-
         dc.onerror = (e) => {
           setError(`DataChannel error: ${e.message || 'unknown'}`);
           setStatusBoth('error');
         };
-
         pc.onicecandidate = ({ candidate }) => {
           if (candidate) {
             socket.emit('ice-candidate', { roomId: roomIdRef.current, candidate });
           }
         };
-
         let iceRestartTimer = null;
         pc.onconnectionstatechange = async () => {
           const state = pc.connectionState;
@@ -140,7 +132,6 @@ export function useSender() {
         setStatusBoth('error');
       }
     });
-
     socket.on('answer', async ({ answer }) => {
       const pc = pcRef.current;
       if (!pc) return;
@@ -156,7 +147,6 @@ export function useSender() {
         console.warn('setRemoteDescription error:', err.message);
       }
     });
-
     socket.on('ice-candidate', async ({ candidate }) => {
       const pc = pcRef.current;
       if (!pc || !pc.remoteDescription) {
@@ -166,19 +156,15 @@ export function useSender() {
       try { await pc.addIceCandidate(candidate); }
       catch (err) { console.warn('addIceCandidate error:', err.message); }
     });
-
     socket.on('peer-disconnected', () => {
       setStatusBoth('disconnected');
       setError('The receiver has disconnected.');
       cleanupPeer();
     });
-
     socket.on('error', ({ message }) => {
       setError(message);
       setStatusBoth('error');
     });
-
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cleanupPeer]);
 
   const sendFile = useCallback(async (targetFile, startOffset = 0) => {
@@ -186,12 +172,11 @@ export function useSender() {
     if (!dc || dc.readyState !== 'open') return;
     try {
       setStatusBoth('transferring');
-      
-      // UPGRADE 2: RAM-Safe Hash Bypass
+
       let fileHash = 'skipped-due-to-size';
       if (targetFile.size < 25 * 1024 * 1024) {
         setIsHashing(true);
-        fileHash = await sha256(targetFile); // Used YOUR original sha256 call
+        fileHash = await sha256(targetFile);
         setIsHashing(false);
       }
       
@@ -207,8 +192,7 @@ export function useSender() {
       let offset = startOffset;
       let totalSent = startOffset;
       const speedWindow = { bytes: 0, time: Date.now() };
-      
-      // UPGRADE 1: RAM-Safe File Slice Streaming
+
       while (offset < targetFile.size) {
         if (dc.readyState !== 'open') {
           throw new Error('DataChannel closed during transfer.');
@@ -221,13 +205,11 @@ export function useSender() {
         const end = Math.min(offset + CHUNK_SIZE, targetFile.size);
         const chunkBlob = targetFile.slice(offset, end);
         const rawChunk = await chunkBlob.arrayBuffer();
-        
         const encryptedChunk = await encryptChunk(rawChunk, cryptoKeyRef.current);
         
         dc.send(encryptedChunk);
         offset = end;
-        totalSent += rawChunk.byteLength;
-        
+        totalSent += rawChunk.byteLength;  
         setProgress(Math.round((totalSent / targetFile.size) * 100));
         setBytesSent(totalSent);
         
@@ -256,8 +238,6 @@ export function useSender() {
   const setFile = useCallback((f) => {
     setFileState(f);
     fileRef.current = f;
-    
-    // UPGRADE 3 Trigger: We start the server connection HERE!
     if (!socketRef.current) {
       startConnection();
     } else if (dcRef.current?.readyState === 'open') {
@@ -273,7 +253,6 @@ export function useSender() {
     setError(null);
   }, []);
 
-  // Cleanup on unmount (replaces the old auto-connect block)
   useEffect(() => {
     return () => {
       cleanupPeer();
@@ -283,6 +262,5 @@ export function useSender() {
       }
     };
   }, [cleanupPeer]);
-
   return { status, error, roomId, shareLink, file, progress, speed, eta, bytesSent, isHashing, setFile, clearFile };
 }
