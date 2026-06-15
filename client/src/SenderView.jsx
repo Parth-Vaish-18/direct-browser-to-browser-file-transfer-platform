@@ -28,8 +28,8 @@ export default function SenderView() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
         <div>
           <h2 style={{ fontSize: '24px', fontWeight: 600, marginBottom: '8px' }}>Send a File</h2>
-          <p style={{ color: 'var(--text-secondary)', fontSize: '14px', margin: 0 }}>
-            Generate a secure room and share the link.
+          <p style={{ color: 'var(--text-secondary)', fontSize: '15px', margin: 0 }}>
+            Add a file to generate your secure transfer link.
           </p>
         </div>
         <ConnectionStatus status={status} />
